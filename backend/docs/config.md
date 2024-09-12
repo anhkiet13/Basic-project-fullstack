@@ -7,7 +7,9 @@
 B1: Cài các gói cần thiết cài đặt thư viện cho script file
   + npm install glob fs   
   + npm install -g jscodeshift  
-B2: Chạy file script convert-to-esm.js: node convert-to-esm.js
+  
+B2: Chuyển đổi ở location: bin\www đổi tên file www => www.js (khi này convert file mới xác nhận với file này).
+   => Chạy file script convert-to-esm.js: node convert-to-esm.js
 
 B3: Kiểm tra các file trong project đảm bảo đã convert đầy đủ thành dạng module
   * B3.1: Tại folder bin\www.js 
