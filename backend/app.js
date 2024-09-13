@@ -22,8 +22,8 @@ app.get('/', (req, res) => {
 
 // Ta thường để /api/... để phù hợp hơn với môi trường phát triển
 // Note thử vận dụng kiến thức cơ bản để tạo 1 basic CRUD (POST/PUT chưa hoàn thiện vì còn fix cứng)
-// Đang học đến phần thực hiện query với params truyền vào dưới dạng 
-// localhost:3000/api/users?filter=...&sort=...
+// Đã xong phần học GET with query, GET with ID
+// Tiếp đến POST 
 const users = [
   { id: 1, username: "john", displayName: "John", isDelete: false },
   { id: 2, username: "ron", displayName: "Ron", isDelete: false },
@@ -32,23 +32,61 @@ const users = [
   { id: 5, username: "dan", displayName: "Dan", isDelete: false },
   { id: 6, username: "billie", displayName: "Billie", isDelete: false },
 ];
+
 // GET
 app.get('/api/users', (req, res) => {
-  res.status(200).send(users.filter(user => !user.isDelete));
+  console.log(req.query);
+  const {query: {filter, type, value}} = req;
+
+  if(!filter && !value)  return res.status(200).send(
+    users.filter(user => !user.isDelete)
+  ); 
+
+  if(filter && value) {
+    return res.send(users.filter(user => user[filter].includes(value) && !user.isDelete));
+  }
+
+  if(filter){
+    switch(filter){
+      case 'username':
+        if(type && type == "desc")
+          users.sort((a, b) => b.username.localeCompare(a.username));
+        else 
+          users.sort((a, b) => a.username.localeCompare(b.username));
+      break;
+      case 'displayName':
+        if(type && type == "desc")
+          users.sort((a, b) => b.displayName.localeCompare(a.displayName));
+        else 
+          users.sort((a, b) => a.displayName.localeCompare(b.displayName));
+      break;
+      default:
+        break;
+    }
+  }
+
+  // Trả về toàn bộ user bỏ các user đã bị delete
+  let usersResponse = users.filter(user => !user.isDelete);
+
+  // Kiểm tra dữ liệu và trả về response
+  if(usersResponse.length == 0) 
+    return res.status(404).send({msg:"User not found!"});
+  return res.status(200).send(usersResponse);
 });
+
 // GET by ID
 app.get('/api/users/:id', (req, res) => {
-  const id = req.params.id;
   const parseId = parseInt(req.params.id);
 
-  if(isNaN(parseId))
-    return res.status(400).send({msg: "Bad Request, Invalid ID!"});
+  if (isNaN(parseId))
+    return res.status(400).send({ msg: "Bad Request, Invalid ID!" });
 
   const user = users.find(user => user.id === parseId);
-  if(!user) 
-    return res.status(404).send({msg: "Not found!"});
+  if (!user)
+    return res.status(404).send({ msg: "Not found!" });
   return res.status(200).send(user);
 });
+
 // POST
 app.post('/api/users', (req, res) => {
   const user = {
@@ -65,7 +103,7 @@ app.delete('/api/delete/users/:id', (req, res) => {
   const id = req.params.id;
   const userId = users.findIndex(user => user.id == id);
   console.log(userId);
-  
+
   users[userId].isDelete = true;
   res.status(200).send(users.filter(user => !user.isDelete));
 });
