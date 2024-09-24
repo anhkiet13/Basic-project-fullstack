@@ -135,8 +135,27 @@ app.post('/api/users', userValidationRules(), (req, res) => {
 });
 
 // PUT 
-app.put('/api/users/:id', (req, res) => {
+app.put('/api/users/:id', userValidationRules(), (req, res) => {
+  // Validation trước khi vào phần xử lý update
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    console.log(errors);
+    const errorMessages = errors.array().map(error => error.msg);
+    return res.status(400).json({ messages: errorMessages });
+  }
 
+  const {body, params: {id}} = req;
+  // Xử lý id truyền vào hợp lệ hay không
+  const parseId = parseInt(id);
+  if(isNaN(parseId))  return res.status(400).send({ msg: "Bad Request, Invalid ID!" });
+  // Xử lý tìm index của user cần update và xử lý res nếu không có
+  const userIndex = users.findIndex(user => user.id === parseId);
+  if(userIndex === -1) return res.status(404).send({ msg: "Not Found!" });
+  // Chúng ta thực hiện cập nhật user đã tìm thấy trên tinh thần của method là PUT 
+  // sẽ thay đổi toàn bộ record (chúng ta chưa dùng DB) nên việc cập nhật này sẽ đưa 
+  // vào id nên ta đưa id như cũ (không cập nhật id) và cập nhật các phần còn lại.
+  users[userIndex] = {id: parseId, ...body};
+  return res.status(200).send({msg: "Update complete", userUpdate: users[userIndex]});
 }),
 
 // PATCH
@@ -144,10 +163,10 @@ app.put('/api/users/:id', (req, res) => {
 // DELETE | tương tự như PUT nhưng chỉ ở cấp độ cập nhật isDeleted ở đây
 app.delete('/api/delete/users/:id', (req, res) => {
   const id = req.params.id;
-  const userId = users.findIndex(user => user.id == id);
-  console.log(userId);
+  const userIndex = users.findIndex(user => user.id == id);
+  console.log(userIndex);
 
-  users[userId].isDelete = true;
+  users[userIndex].isDelete = true;
   res.status(200).send(users.filter(user => !user.isDelete));
 });
 
