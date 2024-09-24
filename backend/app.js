@@ -27,8 +27,7 @@ app.get('/', (req, res) => {
 
 // Ta thường để /api/... để phù hợp hơn với môi trường phát triển
 // Note thử vận dụng kiến thức cơ bản để tạo 1 basic CRUD (POST/PUT chưa hoàn thiện vì còn fix cứng)
-// Đã xong phần học GET with query, GET with ID
-// Tiếp đến POST 
+
 const users = [
   { id: 1, username: "john", displayName: "John", isDelete: false },
   { id: 2, username: "ron", displayName: "Ron", isDelete: false },
@@ -101,13 +100,13 @@ app.get('/api/users/:id', (req, res) => {
   }
 });
 
-
 // POST
 // Lưu ý: thông thường ứng dụng sẽ không thể đọc bodyParser được vì chưa khai báo công cụ 
 // Chúng ta cần phải cấu hình cho phép app.use sử dụng các PT json trong express.
 // Để thực hiện validation chúng ta có thể sử dụng gói express-validation npm 
 // Thực hiện cài đặt gọi npm express-validation và thực hiện tạo folder validation cho user
 // Để ngăn chặn tình trạng lỗi không được bắt hữu hiệu chúng ta sẽ bọc các xử lý vào try-catch()
+// Đọc kỹ hơn tại docs validation.md
 app.post('/api/users', userValidationRules(), (req, res) => {
   try {
     const errors = validationResult(req);
@@ -135,6 +134,12 @@ app.post('/api/users', userValidationRules(), (req, res) => {
   }
 });
 
+// PUT 
+app.put('/api/users/:id', (req, res) => {
+
+}),
+
+// PATCH
 
 // DELETE | tương tự như PUT nhưng chỉ ở cấp độ cập nhật isDeleted ở đây
 app.delete('/api/delete/users/:id', (req, res) => {
