@@ -161,13 +161,17 @@ app.put('/api/users/:id', userValidationRules(), (req, res) => {
 // PATCH
 
 // DELETE | tương tự như PUT nhưng chỉ ở cấp độ cập nhật isDeleted ở đây
-app.delete('/api/delete/users/:id', (req, res) => {
-  const id = req.params.id;
-  const userIndex = users.findIndex(user => user.id == id);
+app.delete('/api/users/:id', (req, res) => {
+  const {params: {id}} = req;
+  const parseId = parseInt(id);
+  if(isNaN(parseId))  return res.status(400).send({ msg: "Bad Request, Invalid ID!" });
+  const userIndex = users.findIndex(user => user.id === parseId);
   console.log(userIndex);
+  if(userIndex === -1)  return res.status(404).send({ msg: "Not Found!"});
 
   users[userIndex].isDelete = true;
-  res.status(200).send(users.filter(user => !user.isDelete));
+  users.filter(user => !user.isDelete)
+  return res.status(200).send({msg: "Delete success!"});
 });
 
 app.get('/api/products', (req, res) => {
