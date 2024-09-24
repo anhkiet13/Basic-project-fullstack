@@ -8,12 +8,17 @@ import bodyParser from 'body-parser';
 import indexRouter from './routes/index.js';
 import usersRouter from './routes/users.js';
 import { fileURLToPath } from 'url';
+import { validationResult } from 'express-validator';
+import { userValidationRules } from './validations/validation-user.js'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 var app = express();
 const PORT = process.env.PORT || 3000;
+
+// Cấu hình cho phép ứng dụng sử dụng những tính năng kết nối JSON của express
+app.use(express.json());
 
 // Thực hiện CRUD basic
 app.get('/', (req, res) => {
@@ -35,69 +40,102 @@ const users = [
 
 // GET
 app.get('/api/users', (req, res) => {
-  console.log(req.query);
-  const {query: {filter, type, value}} = req;
+  try {
+    console.log(req.query);
+    const { query: { filter, type, value } } = req;
 
-  if(!filter && !value)  return res.status(200).send(
-    users.filter(user => !user.isDelete)
-  ); 
+    if (!filter && !value) return res.status(200).send(
+      users.filter(user => !user.isDelete)
+    );
 
-  if(filter && value) {
-    return res.send(users.filter(user => user[filter].includes(value) && !user.isDelete));
-  }
-
-  if(filter){
-    switch(filter){
-      case 'username':
-        if(type && type == "desc")
-          users.sort((a, b) => b.username.localeCompare(a.username));
-        else 
-          users.sort((a, b) => a.username.localeCompare(b.username));
-      break;
-      case 'displayName':
-        if(type && type == "desc")
-          users.sort((a, b) => b.displayName.localeCompare(a.displayName));
-        else 
-          users.sort((a, b) => a.displayName.localeCompare(b.displayName));
-      break;
-      default:
-        break;
+    if (filter && value) {
+      return res.send(users.filter(user => user[filter].includes(value) && !user.isDelete));
     }
+
+    if (filter) {
+      switch (filter) {
+        case 'username':
+          if (type && type == "desc")
+            users.sort((a, b) => b.username.localeCompare(a.username));
+          else
+            users.sort((a, b) => a.username.localeCompare(b.username));
+          break;
+        case 'displayName':
+          if (type && type == "desc")
+            users.sort((a, b) => b.displayName.localeCompare(a.displayName));
+          else
+            users.sort((a, b) => a.displayName.localeCompare(b.displayName));
+          break;
+        default:
+          break;
+      }
+    }
+    // Trả về toàn bộ user bỏ các user đã bị delete
+    let usersResponse = users.filter(user => !user.isDelete);
+
+    // Kiểm tra dữ liệu và trả về response
+    if (usersResponse.length == 0)
+      return res.status(404).send({ msg: "User not found!" });
+    return res.status(200).send(usersResponse);
+  } catch (error) {
+    console.error("Error render users:", error);
+    return res.status(500).json({ message: "Error render users" });
   }
-
-  // Trả về toàn bộ user bỏ các user đã bị delete
-  let usersResponse = users.filter(user => !user.isDelete);
-
-  // Kiểm tra dữ liệu và trả về response
-  if(usersResponse.length == 0) 
-    return res.status(404).send({msg:"User not found!"});
-  return res.status(200).send(usersResponse);
 });
 
 // GET by ID
 app.get('/api/users/:id', (req, res) => {
-  const parseId = parseInt(req.params.id);
+  try {
+    const parseId = parseInt(req.params.id);
 
-  if (isNaN(parseId))
-    return res.status(400).send({ msg: "Bad Request, Invalid ID!" });
+    if (isNaN(parseId))
+      return res.status(400).send({ msg: "Bad Request, Invalid ID!" });
 
-  const user = users.find(user => user.id === parseId);
-  if (!user)
-    return res.status(404).send({ msg: "Not found!" });
-  return res.status(200).send(user);
+    const user = users.find(user => user.id === parseId);
+    if (!user)
+      return res.status(404).send({ msg: "Not found!" });
+    return res.status(200).send(user);
+  } catch (error) {
+    console.error("Error get user:", error);
+    return res.status(500).json({ message: "Error get user" });
+  }
 });
+
 
 // POST
-app.post('/api/users', (req, res) => {
-  const user = {
-    id: users.length - 1,
-    username: "new",
-    displayName: "New User",
-    isDelete: false,
+// Lưu ý: thông thường ứng dụng sẽ không thể đọc bodyParser được vì chưa khai báo công cụ 
+// Chúng ta cần phải cấu hình cho phép app.use sử dụng các PT json trong express.
+// Để thực hiện validation chúng ta có thể sử dụng gói express-validation npm 
+// Thực hiện cài đặt gọi npm express-validation và thực hiện tạo folder validation cho user
+// Để ngăn chặn tình trạng lỗi không được bắt hữu hiệu chúng ta sẽ bọc các xử lý vào try-catch()
+app.post('/api/users', userValidationRules(), (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      console.log(errors);
+      const errorMessages = errors.array().map(error => error.msg);
+      return res.status(400).json({ messages: errorMessages });
+    }
+
+    console.log(req.body);
+    const { username, displayName } = req.body;
+
+    const user = {
+      id: users.length + 1,
+      username,
+      displayName: displayName || "",
+      isDelete: false
+    }
+
+    users.push(user);
+    return res.status(200).send(user);
+  } catch (error) {
+    console.error("Error creating user:", error);
+    return res.status(500).json({ message: "Error creating user" });
   }
-  users.push(user);
-  res.status(200).send(users);
 });
+
+
 // DELETE | tương tự như PUT nhưng chỉ ở cấp độ cập nhật isDeleted ở đây
 app.delete('/api/delete/users/:id', (req, res) => {
   const id = req.params.id;
